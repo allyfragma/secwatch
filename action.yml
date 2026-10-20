@@ -1,0 +1,66 @@
+name: "secwatch external check"
+description: "See your server the way attackers do: open ports, HTTPS, served secret files, APIs that answer without login. Alerts in Telegram."
+author: "allyfragma"
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  targets:
+    description: "Sites to check, one per line or comma separated (e.g. https://example.com)"
+    required: true
+  must-deny:
+    description: "API URLs that must refuse requests without login, one per line"
+    required: false
+    default: ""
+  allowed-ports:
+    description: "Ports that may be open to the internet"
+    required: false
+    default: "22,80,443"
+  fail-on:
+    description: "Fail the run if a problem of this severity or worse is found: critical, high, medium, low, never"
+    required: false
+    default: "high"
+  lang:
+    description: "Report language: en or ru"
+    required: false
+    default: "en"
+  telegram-token:
+    description: "Telegram bot token (store it in a secret)"
+    required: false
+    default: ""
+  telegram-chat-id:
+    description: "Telegram chat id for the report"
+    required: false
+    default: ""
+  notify-ok:
+    description: "Also send a Telegram message when everything is fine"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+    - name: Install secwatch
+      shell: bash
+      run: pip install --quiet --disable-pip-version-check -r "$GITHUB_ACTION_PATH/requirements.txt"
+    - name: External check
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        SECWATCH_PROBE_TARGETS: ${{ inputs.targets }}
+        SECWATCH_PROBE_MUST_DENY: ${{ inputs.must-deny }}
+        SECWATCH_PROBE_ALLOWED_PORTS: ${{ inputs.allowed-ports }}
+        SECWATCH_LANG: ${{ inputs.lang }}
+        SECWATCH_TELEGRAM_TOKEN: ${{ inputs.telegram-token }}
+        SECWATCH_TELEGRAM_CHAT_ID: ${{ inputs.telegram-chat-id }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        NOTIFY_OK: ${{ inputs.notify-ok }}
+      run: |
+        args=(probe --fail-on "$FAIL_ON")
+        if [ -n "$SECWATCH_TELEGRAM_TOKEN" ] && [ -n "$SECWATCH_TELEGRAM_CHAT_ID" ]; then args+=(--telegram); fi
+        if [ "$NOTIFY_OK" = "true" ]; then args+=(--notify-ok); fi
+        python -m secwatch "${args[@]}"

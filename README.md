@@ -90,6 +90,26 @@ docker compose -f compose.dev.yaml up --build   # http://localhost:8089  admin /
 docker build --target test -t secwatch:test . && docker run --rm secwatch:test
 ```
 
+## Check from the outside (free GitHub Action)
+
+The monitor sees the server from the inside. `secwatch probe` looks at it the way
+an attacker does — from the internet:
+
+- risky ports open to the world (databases, Redis, Docker API, dev servers, admin panels…);
+- HTTPS certificate valid and not expiring, HTTP redirects to HTTPS, HSTS;
+- secret files actually served (`.env`, `.git`, dumps, status pages) — judged by
+  content, so apps that answer 200 to every URL do not raise false alarms;
+- API URLs you list really refuse requests without login.
+
+Run it daily from GitHub (free, nothing to install): copy
+[examples/external-check.yml](examples/external-check.yml) to
+`.github/workflows/` of any repository, put your site and API URLs in it and add
+the secrets `SECWATCH_TELEGRAM_TOKEN` / `SECWATCH_TELEGRAM_CHAT_ID`. You get a
+Telegram message when something is exposed, and the run fails (GitHub emails you).
+
+Or from any machine: `secwatch probe https://example.com --must-deny https://example.com/api/me`.
+Only probe servers you own.
+
 ## Settings
 
 All settings are environment variables (see [.env.example](.env.example));

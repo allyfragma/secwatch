@@ -1,0 +1,22 @@
+# Copy to .github/workflows/external-check.yml in any of your repositories (a private one is fine).
+# Add repository secrets SECWATCH_TELEGRAM_TOKEN and SECWATCH_TELEGRAM_CHAT_ID for Telegram reports.
+name: External security check
+on:
+  schedule:
+    - cron: "17 6 * * *"   # every day at 06:17 UTC
+  workflow_dispatch:        # and a "Run workflow" button
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: allyfragma/secwatch@v0.2.0
+        with:
+          targets: |
+            https://example.com
+          must-deny: |
+            https://example.com/api/me
+            https://example.com/api/admin/users
+          lang: en
+          telegram-token: ${{ secrets.SECWATCH_TELEGRAM_TOKEN }}
+          telegram-chat-id: ${{ secrets.SECWATCH_TELEGRAM_CHAT_ID }}

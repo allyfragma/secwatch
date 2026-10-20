@@ -13,7 +13,6 @@
   "kind.f2b_ban.label": "fail2ban: IP banned",
   "kind.supabase_auth_fail.label": "Supabase Auth: failed login",
   "kind.supabase_rate_limit.label": "Supabase: rate limit exceeded",
-
   "kind.ssh_failed_password.explain": "Someone is guessing an SSH password or key. Dangerous only if password login is enabled and the password is weak.",
   "kind.ssh_invalid_user.explain": "Guessing user names such as admin, test or oracle. Normal internet background: bots try common names.",
   "kind.ssh_preauth_fail.explain": "The connection closed before login. With key-only login, almost all brute force looks like this: bots try and leave.",
@@ -26,17 +25,14 @@
   "kind.f2b_ban.explain": "fail2ban banned the IP after a series of failed attempts.",
   "kind.supabase_auth_fail.explain": "Failed login through Supabase Auth (wrong password, invalid token).",
   "kind.supabase_rate_limit.explain": "Supabase rejected requests over the rate limit: possible brute force or flooding.",
-
   "severity.critical": "critical",
   "severity.high": "high",
   "severity.medium": "medium",
   "severity.low": "low",
   "severity.info": "info",
-
   "plural.object.one": "object",
   "plural.object.few": "objects",
   "plural.object.many": "objects",
-
   "parser.malformed": "malformed request",
   "parser.served": "response {status}, {size} bytes",
   "parser.exploit.path_traversal": "path traversal",
@@ -52,9 +48,7 @@
   "parser.caddy.login_denied": "login denied ({status})",
   "parser.caddy.rate_limited": "rate limit exceeded (429)",
   "parser.caddy.not_found": "404 (path not logged)",
-
   "geo.local_network": "local network",
-
   "finding.sshd_config_missing.title": "SSH configuration not found",
   "finding.sshd_config_missing.detail": "/etc/ssh/sshd_config is not mounted into the container, so the SSH check was skipped.",
   "finding.sshd_config_missing.fix": "Mount /etc/ssh:/host/etc/ssh:ro (see compose.yaml).",
@@ -85,7 +79,6 @@
   "finding.unreadable.title": "Cannot read log {path}",
   "finding.unreadable.detail": "The monitor cannot read this file, so attacks logged there are not counted.",
   "finding.unreadable.fix": "Give the monitor's user read access (the adm group or the group that owns the log).",
-
   "supabase.objects_list": "Objects: {objects}{more}.",
   "supabase.and_more": " and {count} more",
   "supabase.part.advisors": "security checks",
@@ -96,7 +89,6 @@
   "supabase.unavailable.title": "Supabase: {what} unavailable",
   "supabase.unavailable.detail": "The Management API request failed ({error}). Supabase may have changed the API.",
   "supabase.unavailable.fix": "Check the secwatch service log and update the monitor.",
-
   "rec.ssh_bruteforce_success.title": "Password login from an IP that was guessing passwords the same day: {ip}",
   "rec.ssh_bruteforce_success.detail": "User {user}, {time}. This looks like a successful password guess.",
   "rec.ssh_bruteforce_success.fix": "Right now: check `last`, `who`, `/root/.ssh/authorized_keys`, crontab and new processes; change the user's password; disable password login. If in doubt, treat the server as compromised.",
@@ -114,12 +106,10 @@
   "rec.web_exploits.title": "Bots are trying web exploits",
   "rec.web_exploits.detail": "{count} requests with attack signatures (see \"Web targets\").",
   "rec.web_exploits.fix": "Background noise as long as the responses are 4xx. Keep Next.js, nginx and dependencies up to date, and check that none of these requests got a 200.",
-
   "alert.new_login": "🔑 <b>SSH login from a new IP</b>\n{user} ← {ip} ({country}, {asn})\n{detail}\nIf this was not you, check the server now.",
   "alert.sensitive_file": "🚨 <b>The server served a sensitive file</b>\n{target} → {status}\nIP {ip}. Block the path and rotate the secrets.",
   "alert.spike": "⚠️ <b>Attack spike</b>: {count} events in 10 minutes from {ip} ({country}, {asn})",
   "alert.finding": "🛑 <b>New finding ({severity})</b>\n{title}\n{detail}",
-
   "digest.title": "🛡 <b>Security summary for {day}</b>",
   "digest.risk": "Risk: <b>{level}</b> ({score}/100)",
   "digest.attacks": "Attack events: {attacks} from {ips} IPs",
@@ -128,9 +118,7 @@
   "digest.logins": "Successful SSH logins: {count}",
   "digest.top_ip": "Most active: {ip} ({country}), {count} events",
   "digest.fix_header": "What to fix:",
-
   "web.analyze_later": "Analysis with Claude is planned for a later release",
-
   "ui.title": "🛡 secwatch: attack monitor",
   "ui.day": "Day {day} ({timezone}) · last collection: {last} UTC",
   "ui.never": "not yet",
@@ -187,5 +175,32 @@
   "ui.connected": "connected",
   "ui.not_connected": "not connected",
   "ui.enabled": "on",
-  "ui.disabled": "off"
+  "ui.disabled": "off",
+  "finding.probe_port.title": "Port {port} ({service}) is open to the internet on {host}",
+  "finding.probe_port.detail": "Anyone can connect to {host}:{port}. Services like this are scanned and attacked within minutes of going online.",
+  "finding.probe_port.fix": "Close it in the firewall (e.g. `sudo ufw deny {port}`) or bind the service to 127.0.0.1 / a private network. If it must be public, allow only your IPs.",
+  "finding.probe_tls_invalid.title": "HTTPS certificate of {host} is not valid",
+  "finding.probe_tls_invalid.detail": "Browsers show a warning and connections can be intercepted: {error}.",
+  "finding.probe_tls_invalid.fix": "Renew or fix the certificate (Caddy and certbot do it automatically when port 80 is reachable and DNS points to the server).",
+  "finding.probe_tls_expiring.title": "HTTPS certificate of {host} expires in {days} days",
+  "finding.probe_tls_expiring.detail": "Automatic renewal seems to fail; after expiry the site stops opening.",
+  "finding.probe_tls_expiring.fix": "Check the renewal logs (Caddy: journalctl -u caddy; certbot: sudo certbot renew --dry-run).",
+  "finding.probe_no_https_redirect.title": "{host}: plain HTTP is not redirected to HTTPS",
+  "finding.probe_no_https_redirect.detail": "Visitors who type the address without https:// stay on an unencrypted connection.",
+  "finding.probe_no_https_redirect.fix": "Redirect port 80 to HTTPS (Caddy does it by default; nginx: return 301 https://$host$request_uri;).",
+  "finding.probe_no_hsts.title": "{host}: no HSTS header",
+  "finding.probe_no_hsts.detail": "Browsers are not told to always use HTTPS for this site.",
+  "finding.probe_no_hsts.fix": "Add the header Strict-Transport-Security: max-age=31536000; includeSubDomains.",
+  "finding.probe_unreachable.title": "{url} does not answer",
+  "finding.probe_unreachable.detail": "The site could not be reached from the outside during the check.",
+  "finding.probe_unreachable.fix": "Check that the server and the web server are running and DNS points to the right address.",
+  "finding.probe_secret_file.title": "Secret file is served to anyone: {url}",
+  "finding.probe_secret_file.detail": "The content looks like a real {what}. Bots look for these files every day.",
+  "finding.probe_secret_file.fix": "Block the path in the web server right now, remove the file from the web root and rotate every password and key it contained.",
+  "finding.probe_api_open.title": "API answers without login: {url}",
+  "finding.probe_api_open.detail": "A request without any login got HTTP {status} with {size} bytes of data instead of 401/403.",
+  "finding.probe_api_open.fix": "Check that this route verifies the session or API key before reading data (and that database rules, e.g. Supabase RLS, do not allow anonymous reads).",
+  "probe.report.title": "secwatch external check: {targets}",
+  "probe.report.ok": "Nothing exposed: no risky open ports, certificate fine, no secret files, protected APIs refuse anonymous requests.",
+  "probe.report.found": "Problems found: {n}"
 }

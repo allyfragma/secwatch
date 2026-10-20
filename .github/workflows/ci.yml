@@ -28,3 +28,20 @@ jobs:
       - run: shellcheck install.sh deploy/install.sh
       - run: docker build --target runtime -t secwatch:ci .
       - run: docker run --rm secwatch:ci --version
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Local site with a leaked .env (only 127.0.0.1 is probed)
+        run: |
+          mkdir -p /tmp/www && printf 'DB_PASSWORD=x\n' > /tmp/www/.env
+          (cd /tmp/www && python3 -m http.server 8080 >/dev/null 2>&1 &) && sleep 1
+      - id: probe
+        uses: ./
+        continue-on-error: true
+        with:
+          targets: http://127.0.0.1:8080
+          fail-on: critical
+      - name: The leak must fail the check
+        run: test "${{ steps.probe.outcome }}" = "failure"

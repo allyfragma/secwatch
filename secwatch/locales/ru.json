@@ -13,7 +13,6 @@
   "kind.f2b_ban.label": "fail2ban: IP заблокирован",
   "kind.supabase_auth_fail.label": "Supabase Auth: неудачный вход",
   "kind.supabase_rate_limit.label": "Supabase: превышен лимит запросов",
-
   "kind.ssh_failed_password.explain": "Кто-то подбирает пароль или ключ к SSH. Опасно только если вход по паролю разрешён и пароль слабый.",
   "kind.ssh_invalid_user.explain": "Подбор логинов вида admin, test, oracle. Обычный фон интернета: боты перебирают популярные имена.",
   "kind.ssh_preauth_fail.explain": "Соединение оборвано до входа. При входе только по ключу так выглядит почти весь перебор: боты пробуют и уходят.",
@@ -26,17 +25,14 @@
   "kind.f2b_ban.explain": "fail2ban заблокировал IP после серии неудачных попыток.",
   "kind.supabase_auth_fail.explain": "Неудачный вход через Supabase Auth (неверный пароль, недействительный токен).",
   "kind.supabase_rate_limit.explain": "Supabase отклонил запросы по лимиту частоты — возможен перебор или флуд.",
-
   "severity.critical": "критично",
   "severity.high": "высокий",
   "severity.medium": "средний",
   "severity.low": "низкий",
   "severity.info": "инфо",
-
   "plural.object.one": "объект",
   "plural.object.few": "объекта",
   "plural.object.many": "объектов",
-
   "parser.malformed": "битый запрос",
   "parser.served": "ответ {status}, {size} байт",
   "parser.exploit.path_traversal": "обход каталогов",
@@ -52,9 +48,7 @@
   "parser.caddy.login_denied": "отказ входа ({status})",
   "parser.caddy.rate_limited": "превышен лимит (429)",
   "parser.caddy.not_found": "404 (путь не журналируется)",
-
   "geo.local_network": "локальная сеть",
-
   "finding.sshd_config_missing.title": "Конфигурация SSH не найдена",
   "finding.sshd_config_missing.detail": "Файл /etc/ssh/sshd_config не смонтирован в контейнер — проверка SSH пропущена.",
   "finding.sshd_config_missing.fix": "Смонтируйте /etc/ssh:/host/etc/ssh:ro (см. compose.yaml).",
@@ -85,7 +79,6 @@
   "finding.unreadable.title": "Нет доступа к журналу {path}",
   "finding.unreadable.detail": "Монитор не может прочитать этот файл, атаки из него не учитываются.",
   "finding.unreadable.fix": "Выдать пользователю монитора право чтения (группа adm или группа владельца журнала).",
-
   "supabase.objects_list": "Объекты: {objects}{more}.",
   "supabase.and_more": " и ещё {count}",
   "supabase.part.advisors": "проверки безопасности",
@@ -96,7 +89,6 @@
   "supabase.unavailable.title": "Supabase: {what} недоступен",
   "supabase.unavailable.detail": "Запрос к Management API не удался ({error}). Возможно, Supabase изменил API.",
   "supabase.unavailable.fix": "Проверьте журнал службы secwatch и обновите монитор.",
-
   "rec.ssh_bruteforce_success.title": "Успешный вход по паролю с IP, который в этот же день перебирал пароли: {ip}",
   "rec.ssh_bruteforce_success.detail": "Пользователь {user}, {time}. Это похоже на удачный подбор пароля.",
   "rec.ssh_bruteforce_success.fix": "Немедленно: проверить `last`, `who`, `/root/.ssh/authorized_keys`, crontab, новые процессы; сменить пароль пользователя; запретить вход по паролю; при сомнении — считать сервер скомпрометированным.",
@@ -114,12 +106,10 @@
   "rec.web_exploits.title": "Боты пробуют веб-эксплойты",
   "rec.web_exploits.detail": "{count} запросов с признаками атак (см. «Куда долбились»).",
   "rec.web_exploits.fix": "Это фон, пока ответы 4xx. Держите Next.js, nginx и зависимости обновлёнными; проверяйте, что ни один такой запрос не получил 200.",
-
   "alert.new_login": "🔑 <b>Вход SSH с нового IP</b>\n{user} ← {ip} ({country}, {asn})\n{detail}\nЕсли это не вы — срочно проверьте сервер.",
   "alert.sensitive_file": "🚨 <b>Сервер отдал чувствительный файл</b>\n{target} → {status}\nIP {ip}. Закройте путь и смените секреты.",
   "alert.spike": "⚠️ <b>Всплеск атак</b>: {count} событий за 10 минут с {ip} ({country}, {asn})",
   "alert.finding": "🛑 <b>Новая находка ({severity})</b>\n{title}\n{detail}",
-
   "digest.title": "🛡 <b>Сводка безопасности за {day}</b>",
   "digest.risk": "Риск: <b>{level}</b> ({score}/100)",
   "digest.attacks": "Атакующих событий: {attacks} от {ips} IP",
@@ -128,9 +118,7 @@
   "digest.logins": "Успешных входов SSH: {count}",
   "digest.top_ip": "Самый активный: {ip} ({country}) — {count}",
   "digest.fix_header": "Что исправить:",
-
   "web.analyze_later": "Разбор с Claude — вторая очередь",
-
   "ui.title": "🛡 secwatch — мониторинг атак",
   "ui.day": "День {day} ({timezone}) · последний сбор: {last} UTC",
   "ui.never": "ещё не было",
@@ -187,5 +175,32 @@
   "ui.connected": "подключён",
   "ui.not_connected": "не подключён",
   "ui.enabled": "включён",
-  "ui.disabled": "выключен"
+  "ui.disabled": "выключен",
+  "finding.probe_port.title": "Порт {port} ({service}) открыт в интернет на {host}",
+  "finding.probe_port.detail": "К {host}:{port} может подключиться кто угодно. Такие службы находят и атакуют через минуты после появления в сети.",
+  "finding.probe_port.fix": "Закройте его в фаерволе (например, `sudo ufw deny {port}`) или привяжите службу к 127.0.0.1 / внутренней сети. Если он нужен снаружи — разрешите только свои IP.",
+  "finding.probe_tls_invalid.title": "HTTPS-сертификат {host} недействителен",
+  "finding.probe_tls_invalid.detail": "Браузеры показывают предупреждение, соединение можно перехватить: {error}.",
+  "finding.probe_tls_invalid.fix": "Обновите или исправьте сертификат (Caddy и certbot делают это сами, если порт 80 доступен и DNS указывает на сервер).",
+  "finding.probe_tls_expiring.title": "HTTPS-сертификат {host} истекает через {days} дн.",
+  "finding.probe_tls_expiring.detail": "Похоже, автоматическое продление не срабатывает; после истечения сайт перестанет открываться.",
+  "finding.probe_tls_expiring.fix": "Проверьте журнал продления (Caddy: journalctl -u caddy; certbot: sudo certbot renew --dry-run).",
+  "finding.probe_no_https_redirect.title": "{host}: обычный HTTP не перенаправляется на HTTPS",
+  "finding.probe_no_https_redirect.detail": "Кто наберёт адрес без https://, останется на незашифрованном соединении.",
+  "finding.probe_no_https_redirect.fix": "Перенаправьте порт 80 на HTTPS (Caddy делает это сам; nginx: return 301 https://$host$request_uri;).",
+  "finding.probe_no_hsts.title": "{host}: нет заголовка HSTS",
+  "finding.probe_no_hsts.detail": "Браузеру не сказано всегда открывать этот сайт по HTTPS.",
+  "finding.probe_no_hsts.fix": "Добавьте заголовок Strict-Transport-Security: max-age=31536000; includeSubDomains.",
+  "finding.probe_unreachable.title": "{url} не отвечает",
+  "finding.probe_unreachable.detail": "Во время проверки сайт был недоступен снаружи.",
+  "finding.probe_unreachable.fix": "Проверьте, что сервер и веб-сервер работают, а DNS указывает на нужный адрес.",
+  "finding.probe_secret_file.title": "Секретный файл отдаётся всем: {url}",
+  "finding.probe_secret_file.detail": "Содержимое похоже на настоящий файл ({what}). Боты ищут такие файлы каждый день.",
+  "finding.probe_secret_file.fix": "Немедленно закройте путь в веб-сервере, уберите файл из каталога сайта и смените все пароли и ключи, которые в нём были.",
+  "finding.probe_api_open.title": "API отвечает без входа: {url}",
+  "finding.probe_api_open.detail": "Запрос без входа получил HTTP {status} и {size} байт данных вместо 401/403.",
+  "finding.probe_api_open.fix": "Проверьте, что этот маршрут проверяет сессию или ключ до чтения данных (и что правила базы, например RLS в Supabase, не разрешают чтение анониму).",
+  "probe.report.title": "secwatch, проверка снаружи: {targets}",
+  "probe.report.ok": "Наружу ничего не торчит: опасных открытых портов нет, сертификат в порядке, секретные файлы не отдаются, защищённые API отказывают без входа.",
+  "probe.report.found": "Найдено проблем: {n}"
 }
