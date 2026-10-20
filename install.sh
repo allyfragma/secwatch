@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO="${SECWATCH_REPO:-allyfragma/secwatch}"
-VERSION="${SECWATCH_VERSION:-latest}"
+SW_VERSION="${SECWATCH_VERSION:-latest}"
 SOURCE=""
 RUN_SETUP=1
 UNINSTALL=0
@@ -25,7 +25,7 @@ fail() { printf '\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --version) VERSION="${2:?--version needs a value}"; shift 2 ;;
+    --version) SW_VERSION="${2:?--version needs a value}"; shift 2 ;;
     --no-setup) RUN_SETUP=0; shift ;;
     --source) SOURCE="${2:?--source needs a path}"; shift 2 ;;
     --uninstall) UNINSTALL=1; shift ;;
@@ -53,9 +53,10 @@ if [ "$UNINSTALL" -eq 1 ]; then
 fi
 
 # --- platform -------------------------------------------------------------
-# shellcheck source=/dev/null
-. /etc/os-release 2>/dev/null || fail "cannot read /etc/os-release"
-case " ${ID:-} ${ID_LIKE:-} " in
+# Read the OS id in a subshell: /etc/os-release defines its own VERSION and other variables.
+# shellcheck disable=SC1091
+os_ids="$(. /etc/os-release 2>/dev/null && echo " ${ID:-} ${ID_LIKE:-} ")" || fail "cannot read /etc/os-release"
+case "$os_ids" in
   *" debian "*|*" ubuntu "*) ;;
   *) fail "this installer supports Ubuntu and Debian. Elsewhere use Docker (see README)." ;;
 esac
@@ -88,15 +89,16 @@ if [ -n "$SOURCE" ]; then
   fi
   say "Installing secwatch from $SOURCE"
 else
-  if [ "$VERSION" = "latest" ]; then
-    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+  if [ "$SW_VERSION" = "latest" ]; then
+    SW_VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
       | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" \
       || fail "cannot find the latest release of $REPO"
   fi
-  case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
-  base="https://github.com/$REPO/releases/download/$VERSION"
-  archive="secwatch-$VERSION.tar.gz"
-  say "Downloading secwatch $VERSION"
+  case "$SW_VERSION" in v*) ;; *) SW_VERSION="v$SW_VERSION" ;; esac
+  case "$SW_VERSION" in *[!A-Za-z0-9._-]*) fail "invalid version: $SW_VERSION" ;; esac
+  base="https://github.com/$REPO/releases/download/$SW_VERSION"
+  archive="secwatch-$SW_VERSION.tar.gz"
+  say "Downloading secwatch $SW_VERSION"
   curl -fsSL -o "$WORK/$archive" "$base/$archive" || fail "download failed: $base/$archive"
   curl -fsSL -o "$WORK/SHA256SUMS" "$base/SHA256SUMS" || fail "download failed: $base/SHA256SUMS"
   (cd "$WORK" && grep " $archive\$" SHA256SUMS | sha256sum -c --quiet -) \

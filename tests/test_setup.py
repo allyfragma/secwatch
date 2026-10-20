@@ -7,7 +7,7 @@ from secwatch import doctor, envfile
 from secwatch.config import Settings
 from secwatch.setup_wizard import Io, detect_logs, detect_timezone, run_setup, telegram_wait_for_chat
 
-TOKEN = "123456:AAAAsecretsecretsecretsecretsecret"
+TOKEN = "fake-bot-token-for-tests"  # not token-shaped on purpose: secret scanners flag look-alikes
 
 
 def test_env_update_keeps_comments_order_and_unrelated_keys(tmp_path):
