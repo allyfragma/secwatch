@@ -1,0 +1,116 @@
+# secwatch — кто атакует ваш сервер и что исправить
+
+Небольшой бесплатный монитор для Linux-сервера (и, по желанию, проекта Supabase).
+Читает журналы **только на чтение**, считает атаки за день, показывает, откуда
+и куда били, оценивает риск, говорит, **что именно исправить** (с готовыми
+командами), и присылает важное в Telegram.
+
+Сделан для тех, кто быстро выпускает приложения и не хочет становиться специалистом по безопасности.
+
+> secwatch наблюдает и объясняет, но не блокирует. Для автоматических банов
+> рядом нужен fail2ban или CrowdSec — secwatch показывает, как они работают.
+
+[English version](README.md)
+
+## Что видно
+
+| Источник | Что вы получаете |
+|---|---|
+| `/var/log/auth.log` (sshd, в том числе `sshd-session` из OpenSSH 9.8+) | перебор паролей и логинов, обрывы до входа, сканирование порта, **успешные входы** (новый IP / после перебора) |
+| nginx `access.log`, JSON-журнал Caddy | поиск `.env`, `.git`, `wp-admin`…, попытки эксплойтов (обход каталогов, SQL-инъекции, Log4Shell, внедрение команд), сканеры, мусорные запросы, **реально отданные секретные файлы** |
+| `fail2ban.log` | кого и когда заблокировали |
+| `/etc/ssh`, `/etc/fail2ban`, `/etc/ufw` | проверка настроек: вход по паролю, вход root, MaxAuthTries, X11, наличие fail2ban и фаервола |
+| Supabase Management API (по желанию) | замечания Security Advisor, неудачные входы и лимиты Auth |
+
+Панель (за паролем): оценка риска, счётчики за день, список **«Что исправить»**,
+атаки по часам и за 7 дней, атакующие IP со страной и сетью, цели атак,
+подбираемые логины и входы по SSH.
+
+Оповещения в Telegram: вход по SSH с нового IP, отдан секретный файл, всплеск
+атак с одного IP, новые критичные находки и ежедневная сводка. Повторов нет,
+а первый запуск становится базовой линией — лавины уведомлений при установке не будет.
+
+Приватность: query-строки веб-запросов отбрасываются, токены и ключи не
+сохраняются и не пишутся в журнал. Страна и сеть определяются офлайн.
+
+## Установка (Ubuntu / Debian, одна команда)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/allyfragma/secwatch/main/install.sh | sudo bash
+```
+
+Скрипт ставит недостающее (Python venv), скачивает последний выпуск,
+**проверяет контрольную сумму**, создаёт службу systemd от непривилегированного
+пользователя, запускает мастер настройки и в конце `secwatch doctor`.
+
+- Обновление: та же команда ещё раз (настройки и данные сохраняются).
+- Конкретная версия: `… | sudo bash -s -- --version v0.2.0`
+- Удаление: `… | sudo bash -s -- --uninstall` (с `--purge` — вместе с настройками и данными).
+- Потом: `sudo secwatch setup` — поменять настройки, `sudo secwatch doctor` — проверить всё.
+
+Хотите сначала прочитать скрипт? `curl -fsSLO …/install.sh && less install.sh && sudo bash install.sh`.
+
+`secwatch setup` спрашивает только то, что не может найти сам:
+
+- **Язык**: `en` или `ru`.
+- **Telegram**: создайте **нового** бота в @BotFather и вставьте его токен.
+  Потом отправьте боту `/start` — чат определится сам, придёт тестовое сообщение.
+- **Supabase** (по желанию): личный токен доступа (достаточно токена участника
+  с ролью только для чтения; задайте срок действия) и ref проекта.
+
+Панель открывается через SSH-туннель (слушает только 127.0.0.1):
+
+```bash
+ssh -L 8088:127.0.0.1:8088 root@ваш-сервер   # затем http://localhost:8088
+```
+
+Пользователь `admin`, пароль — в `/etc/secwatch/secwatch.env`
+(`sudo grep PASSWORD /etc/secwatch/secwatch.env`).
+
+### Docker
+
+```bash
+mkdir secwatch && cd secwatch
+curl -fsSLO https://raw.githubusercontent.com/allyfragma/secwatch/main/compose.yaml
+sudo docker compose run --rm setup     # мастер: записывает ./.env
+sudo docker compose up -d
+sudo docker compose exec secwatch python -m secwatch doctor
+```
+
+Образ: `ghcr.io/allyfragma/secwatch` (amd64 и arm64).
+
+Контейнер работает без root, на файловой системе только для чтения, без
+capabilities; журналы хоста монтируются только на чтение (группа `adm`).
+
+### Попробовать на тестовых данных
+
+```bash
+docker compose -f compose.dev.yaml up --build   # http://localhost:8089  admin / dev-password
+docker build --target test -t secwatch:test . && docker run --rm secwatch:test
+```
+
+## Настройки
+
+Все настройки — переменные окружения (см. [.env.example](.env.example));
+`secwatch setup` записывает их сам. Полезные:
+
+| Переменная | По умолчанию | |
+|---|---|---|
+| `SECWATCH_LANG` | `en` | `en` или `ru` для панели и оповещений |
+| `SECWATCH_TIMEZONE` | `UTC` | часовой пояс для «сегодня» |
+| `SECWATCH_TELEGRAM_TOKEN` / `_CHAT_ID` | — | оповещения напрямую в Telegram |
+| `SECWATCH_SUPABASE_TOKEN` / `_PROJECT_REF` | — | проверки Supabase |
+| `SECWATCH_GEOIP_AUTO_UPDATE` | `1` | скачивать базы страны и сети автоматически |
+| `SECWATCH_ERP_INGEST_URL` / `_KEY` | — | слать оповещения и сводки в своё приложение по HTTP вместо Telegram |
+
+Страна и сеть берутся из бесплатных баз [DB-IP Lite](https://db-ip.com/db/lite.php)
+(CC BY 4.0, без регистрации): они скачиваются в каталог данных и обновляются
+раз в месяц. Файлы MaxMind `GeoLite2-Country.mmdb` / `GeoLite2-ASN.mmdb` в
+каталоге данных главнее.
+
+Нет `/var/log/auth.log` (только journald, например Debian 12)? `sudo apt install rsyslog`.
+
+## Лицензия
+
+MIT. IP-геолокация: [DB-IP](https://db-ip.com) (CC BY 4.0).
+Об уязвимостях — см. [SECURITY.md](SECURITY.md).

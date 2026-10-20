@@ -1,0 +1,9 @@
+.env
+*.db
+*.db-*
+*.mmdb
+__pycache__/
+.pytest_cache/
+samples/
+data/
+.claude/

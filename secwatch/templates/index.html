@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="{{ lang() }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>secwatch — {{ s.day }}</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1d2330;--muted:#667085;--line:#e4e7ec;--accent:#3b5bdb;
+--crit:#c92a2a;--high:#e8590c;--med:#f08c00;--low:#2f9e44;--info:#868e96;--bar:#3b5bdb}
+@media (prefers-color-scheme:dark){:root{--bg:#11141a;--card:#1a1f28;--text:#e6e8ec;--muted:#98a2b3;--line:#2a313c;--accent:#748ffc;--bar:#748ffc}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+h1{font-size:18px;margin:0}h2{font-size:15px;margin:0 0 10px}
+main{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
+.nav a{color:var(--accent);text-decoration:none;margin:0 6px}.muted{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.big{font-size:26px;font-weight:650}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;color:#fff;font-size:12px;font-weight:600}
+.critical{background:var(--crit)}.high{background:var(--high)}.medium{background:var(--med)}.low{background:var(--low)}.info,.notice{background:var(--info)}
+.risk{display:flex;align-items:center;gap:14px}.risk .big{font-size:34px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.bars{display:flex;align-items:flex-end;gap:3px;height:120px}.bars div{flex:1;background:var(--bar);border-radius:3px 3px 0 0;min-height:1px;position:relative}
+.axis{display:flex;gap:3px;font-size:10px;color:var(--muted)}.axis span{flex:1;text-align:center}
+details{border-top:1px solid var(--line);padding:8px 0}summary{cursor:pointer;font-weight:600}
+pre{white-space:pre-wrap;background:var(--bg);padding:8px;border-radius:6px;font-size:12px;margin:6px 0 0}
+.tag{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 6px;margin:1px;font-size:12px}
+button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:8px;padding:8px 12px}
+.ok{color:var(--low);font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>{{ t("ui.title") }}</h1>
+    <div class="muted">{{ t("ui.day", day=s.day, timezone=s.timezone, last=s.last_collect or t("ui.never")) }}</div></div>
+  <div class="nav"><a href="/?day={{ prev_day }}">← {{ prev_day }}</a><a href="/">{{ t("ui.today") }}</a><a href="/?day={{ next_day }}">{{ next_day }} →</a></div>
+</header>
+<main>
+  <section class="card risk">
+    <span class="badge {{ s.risk.level }}">{{ t("ui.risk", level=s.risk.level_label) }}</span>
+    <span class="big">{{ s.risk.score }}/100</span>
+    <span class="muted">{{ t("ui.risk_note") }}</span>
+  </section>
+
+  <section class="cards">
+    <div class="card"><div class="muted">{{ t("ui.card.attacks") }}</div><div class="big">{{ s.attacks }}</div></div>
+    <div class="card"><div class="muted">{{ t("ui.card.ssh_attempts") }}</div><div class="big">{{ s.ssh_attack_conns }}</div></div>
+    <div class="card"><div class="muted">{{ t("ui.card.attacker_ips") }}</div><div class="big">{{ s.attacker_ips }}</div></div>
+    <div class="card"><div class="muted">{{ t("ui.card.web") }}</div><div class="big">{{ s.web_attacks }} <span class="muted" style="font-size:14px">/ {{ s.web_requests }}</span></div></div>
+    <div class="card"><div class="muted">{{ t("ui.card.bans") }}</div><div class="big">{{ s.bans }}</div></div>
+    <div class="card"><div class="muted">{{ t("ui.card.ssh_logins") }}</div><div class="big">{{ s.ssh_logins|length }}</div></div>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("ui.fix.title") }}</h2>
+    {% if not s.recommendations %}<div class="ok">{{ t("ui.fix.none") }}</div>{% endif %}
+    {% for r in s.recommendations %}
+    <details {% if r.severity in ('critical','high') %}open{% endif %}>
+      <summary><span class="badge {{ r.severity }}">{{ r.severity_label }}</span> {{ r.title }}</summary>
+      {% if r.detail %}<div class="muted" style="margin-top:6px">{{ r.detail }}</div>{% endif %}
+      {% if r.fix %}<pre>{{ r.fix }}</pre>{% endif %}
+    </details>
+    {% endfor %}
+    {% for n in s.notes %}<div class="muted" style="margin-top:6px">ℹ️ {{ n.title }}: {{ n.detail }}</div>{% endfor %}
+    <div style="margin-top:12px"><button disabled title="{{ t('ui.claude.hint') }}">{{ t("ui.claude.button") }}</button></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card"><h2>{{ t("ui.hours.title") }}</h2>
+      <div class="bars">{% for n in s.hours %}<div title="{{ loop.index0 }}:00 — {{ n }}" style="height:{{ (100 * n / max_hour)|round(1) }}%"></div>{% endfor %}</div>
+      <div class="axis">{% for h in range(24) %}<span>{{ h if h % 3 == 0 else "" }}</span>{% endfor %}</div></div>
+    <div class="card"><h2>{{ t("ui.trend.title") }}</h2>
+      <div class="bars">{% for d in s.trend %}<div title="{{ d.day }} — {{ d.count }}" style="height:{{ (100 * d.count / max_trend)|round(1) }}%"></div>{% endfor %}</div>
+      <div class="axis">{% for d in s.trend %}<span>{{ d.label }}</span>{% endfor %}</div></div>
+  </section>
+
+  <section class="card"><h2>{{ t("ui.ips.title") }}</h2>
+    {% if not s.geo_available %}<div class="muted">{{ t("ui.ips.no_geo") }}</div>{% endif %}
+    <table><tr><th>IP</th><th>{{ t("ui.ips.country") }}</th><th>{{ t("ui.ips.asn") }}</th><th class="num">{{ t("ui.ips.events") }}</th><th>{{ t("ui.ips.activity") }}</th><th>{{ t("ui.ips.first_last") }}</th><th>{{ t("ui.ips.banned") }}</th></tr>
+    {% for ip in s.top_ips %}<tr><td>{{ ip.ip }}</td><td>{{ ip.country }}</td><td>{{ ip.asn }}</td><td class="num">{{ ip.count }}</td>
+      <td>{% for k in ip.kinds %}<span class="tag">{{ k }}</span>{% endfor %}</td><td>{{ ip.first }} – {{ ip.last }}</td><td>{{ t("ui.ips.yes") if ip.banned else "—" }}</td></tr>
+    {% else %}<tr><td colspan="7" class="muted">{{ t("ui.ips.none") }}</td></tr>{% endfor %}</table>
+    {% if s.geo_dbip %}<div class="muted"><a href="https://db-ip.com" rel="noopener noreferrer">IP Geolocation by DB-IP</a> (CC BY 4.0)</div>{% endif %}
+  </section>
+
+  <section class="grid2">
+    <div class="card"><h2>{{ t("ui.web.title") }}</h2>
+      <table><tr><th>{{ t("ui.web.request") }}</th><th class="num">{{ t("ui.web.hits") }}</th><th class="num">{{ t("ui.web.ips") }}</th><th>{{ t("ui.web.signature") }}</th><th class="num">{{ t("ui.web.status") }}</th></tr>
+      {% for w in s.web_targets %}<tr><td>{{ w.target }}</td><td class="num">{{ w.n }}</td><td class="num">{{ w.ips }}</td><td>{{ w.labels or "" }}</td><td class="num">{{ w.status }}</td></tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ t("ui.none") }}</td></tr>{% endfor %}</table></div>
+    <div class="card"><h2>{{ t("ui.users.title") }}</h2>
+      <table><tr><th>{{ t("ui.users.user") }}</th><th class="num">{{ t("ui.users.attempts") }}</th></tr>
+      {% for u in s.usernames %}<tr><td>{{ u.username }}</td><td class="num">{{ u.n }}</td></tr>
+      {% else %}<tr><td colspan="2" class="muted">{{ t("ui.none") }}</td></tr>{% endfor %}</table></div>
+  </section>
+
+  <section class="card"><h2>{{ t("ui.logins.title") }}</h2>
+    <table><tr><th>{{ t("ui.logins.time") }}</th><th>{{ t("ui.logins.user") }}</th><th>IP</th><th>{{ t("ui.logins.country") }}</th><th>{{ t("ui.logins.method") }}</th><th>{{ t("ui.logins.flags") }}</th></tr>
+    {% for l in s.ssh_logins %}<tr><td>{{ l.time }}</td><td>{{ l.user }}</td><td>{{ l.ip }}</td><td>{{ l.country }}</td><td>{{ l.method }}</td>
+      <td>{% if l.first_time %}<span class="badge medium">{{ t("ui.logins.new_ip") }}</span>{% endif %} {% if l.had_failures %}<span class="badge high">{{ t("ui.logins.had_failures") }}</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="6" class="muted">{{ t("ui.logins.none") }}</td></tr>{% endfor %}</table>
+  </section>
+
+  <section class="card"><h2>{{ t("ui.kinds.title") }}</h2>
+    <table><tr><th>{{ t("ui.kinds.type") }}</th><th class="num">{{ t("ui.kinds.count") }}</th><th>{{ t("ui.kinds.meaning") }}</th></tr>
+    {% for k in s.kind_rows %}<tr><td>{{ k.label }}</td><td class="num">{{ k.count }}</td><td class="muted">{{ k.explain }}</td></tr>
+    {% else %}<tr><td colspan="3" class="muted">{{ t("ui.kinds.none") }}</td></tr>{% endfor %}</table>
+    <div class="muted" style="margin-top:8px">{{ t("ui.integrations", supabase=t("ui.connected") if s.supabase_enabled else t("ui.not_connected"), telegram=t("ui.enabled") if s.telegram_enabled else t("ui.disabled")) }}</div>
+  </section>
+</main>
+</body>
+</html>

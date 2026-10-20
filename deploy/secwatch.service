@@ -1,0 +1,43 @@
+[Unit]
+Description=secwatch attack monitor (read-only log reader + local dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=secwatch
+Group=secwatch
+SupplementaryGroups=adm
+EnvironmentFile=/etc/secwatch/secwatch.env
+Environment=SECWATCH_HOST_ROOT=/ SECWATCH_DB=/var/lib/secwatch/secwatch.db SECWATCH_WEB_HOST=127.0.0.1
+WorkingDirectory=/opt/secwatch/app
+ExecStart=/opt/secwatch/venv/bin/python -m secwatch
+Restart=on-failure
+RestartSec=10
+
+# Hardening: no privileges, read-only system, writes only to its data dir.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+StateDirectory=secwatch
+ReadWritePaths=/var/lib/secwatch
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

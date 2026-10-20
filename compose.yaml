@@ -1,0 +1,57 @@
+# Production: runs on the monitored server, reads host logs read-only.
+#   sudo docker compose run --rm setup     # once: language, Telegram, Supabase -> ./.env
+#   sudo docker compose up -d
+#   sudo docker compose exec secwatch python -m secwatch doctor
+# The dashboard listens on 127.0.0.1 only; open it through an SSH tunnel:
+#   ssh -L 8088:127.0.0.1:8088 root@<server>   then http://localhost:8088
+x-image: &image
+  image: ghcr.io/allyfragma/secwatch:${SECWATCH_IMAGE_TAG:-latest}
+  build:
+    context: .
+    target: runtime
+
+services:
+  secwatch:
+    <<: *image
+    container_name: secwatch
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "127.0.0.1:8088:8088"
+    group_add:
+      - "4"            # adm on the host: read access to auth.log / nginx / fail2ban logs
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - secwatch-data:/data
+      - /var/log:/host/var/log:ro
+      - /etc/ssh:/host/etc/ssh:ro
+      - /etc/fail2ban:/host/etc/fail2ban:ro
+      - /etc/ufw:/host/etc/ufw:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+
+  # One-off configuration wizard: writes ./.env next to this file.
+  setup:
+    <<: *image
+    profiles: ["tools"]
+    command: ["setup", "--env-file", "/cfg/.env", "--host-root", "/host"]
+    user: "0:0"        # writes ./.env owned by root, mode 0600
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/cfg
+      # Only logs: binding a host file that may not exist (e.g. /etc/timezone) would create it as a directory.
+      - /var/log:/host/var/log:ro
+
+volumes:
+  secwatch-data:

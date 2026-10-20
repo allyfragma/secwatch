@@ -1,0 +1,24 @@
+# Local test stand: synthetic logs, no host mounts, no network secrets.
+#   docker compose -f compose.dev.yaml up --build   then http://localhost:8089  (admin / dev-password)
+services:
+  secwatch-dev:
+    build:
+      context: .
+      target: runtime
+    image: secwatch:dev
+    container_name: secwatch-dev
+    environment:
+      SECWATCH_HOST_ROOT: /tmp/host
+      SECWATCH_DB: /tmp/secwatch.db
+      SECWATCH_WEB_PASSWORD: dev-password
+      SECWATCH_POLL_SECONDS: "15"
+      SECWATCH_TIMEZONE: UTC
+    entrypoint: ["sh", "-c", "python tools/gen_samples.py /tmp/host && exec python -m secwatch run"]
+    ports:
+      - "127.0.0.1:8089:8088"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
