@@ -92,3 +92,22 @@ def test_cli_requires_targets(monkeypatch, capsys):
     monkeypatch.delenv("SECWATCH_PROBE_TARGETS", raising=False)
     assert main(["probe"]) == 2
     assert "Nothing to check" in capsys.readouterr().err
+
+
+def test_telegram_errors_are_explained_without_the_token():
+    from secwatch.probe import send_telegram
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(str(request.url))
+        if "/botGOOD/" in str(request.url):
+            body = request.read().decode()
+            return httpx.Response(400, json={"ok": False, "description": "Bad Request: chat not found"}) \
+                if '"chat_id":"0"' in body.replace(" ", "") else httpx.Response(200, json={"ok": True})
+        return httpx.Response(401, json={"ok": False, "description": "Unauthorized"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    assert send_telegram(" GOOD\n", "42", "hi", client) is None          # stray whitespace is trimmed
+    bad = send_telegram("BAD", "42", "hi", client)
+    assert "token is wrong" in bad and "BAD" not in bad
+    assert "press Start" in send_telegram("GOOD", "0", "hi", client)

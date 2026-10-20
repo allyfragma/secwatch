@@ -92,9 +92,12 @@ def probe_command(args: argparse.Namespace) -> int:
         if not (token and chat):
             print("--telegram: SECWATCH_TELEGRAM_TOKEN and SECWATCH_TELEGRAM_CHAT_ID are not set.", file=sys.stderr)
             return 2
-        if (findings or args.notify_ok) and not send_telegram(token, chat, format_report(findings, targets, html=True)):
-            print("Telegram delivery failed.", file=sys.stderr)
-            return 2
+        if findings or args.notify_ok:
+            error = send_telegram(token, chat, format_report(findings, targets, html=True))
+            if error:
+                print(f"Telegram delivery failed: {error}", file=sys.stderr)
+                return 2
+            print("Report sent to Telegram.")
     return 1 if should_fail(findings, args.fail_on) else 0
 
 

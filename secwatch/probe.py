@@ -225,16 +225,27 @@ def format_report(findings: list[Finding], targets: list[str], html: bool = Fals
     return "\n".join(lines)
 
 
-def send_telegram(token: str, chat_id: str, text: str, client: httpx.Client | None = None) -> bool:
+def send_telegram(token: str, chat_id: str, text: str, client: httpx.Client | None = None) -> str | None:
+    """None on success, otherwise Telegram's reason (safe to print: never the URL or token)."""
     own = client is None
     client = client or httpx.Client(timeout=15)
     try:
-        r = client.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                        json={"chat_id": chat_id, "text": text[:4000], "parse_mode": "HTML",
+        r = client.post(f"https://api.telegram.org/bot{token.strip()}/sendMessage",
+                        json={"chat_id": chat_id.strip(), "text": text[:4000], "parse_mode": "HTML",
                               "disable_web_page_preview": True})
-        return r.status_code == 200
-    except httpx.HTTPError:  # never print the URL: it contains the token
-        return False
+        if r.status_code == 200:
+            return None
+        try:
+            reason = str(r.json().get("description") or "")
+        except ValueError:
+            reason = ""
+        if r.status_code in (401, 404):
+            reason = "the bot token is wrong (Telegram: Unauthorized / Not Found)"
+        elif "chat not found" in reason.lower():
+            reason += " — open the bot in Telegram and press Start, and check the chat id"
+        return f"HTTP {r.status_code}: {reason[:200]}"
+    except httpx.HTTPError as exc:  # never print the URL: it contains the token
+        return f"network error: {type(exc).__name__}"
     finally:
         if own:
             client.close()
