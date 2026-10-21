@@ -19,6 +19,8 @@ RUN_SETUP=1
 UNINSTALL=0
 PURGE=0
 ENV_FILE=/etc/secwatch/secwatch.env
+# Some networks drop connections to GitHub now and then: retry instead of failing.
+CURL_RETRY=(--connect-timeout 15 --retry 4 --retry-delay 2 --retry-all-errors)
 
 say()  { printf '\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -90,17 +92,20 @@ if [ -n "$SOURCE" ]; then
   say "Installing secwatch from $SOURCE"
 else
   if [ "$SW_VERSION" = "latest" ]; then
-    SW_VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-      | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" \
-      || fail "cannot find the latest release of $REPO"
+    # The release page redirects to .../releases/tag/<version>. This avoids api.github.com
+    # (rate limits, and some hosts cannot reach it over IPv6).
+    latest_url="$(curl -fsSL "${CURL_RETRY[@]}" -o /dev/null -w '%{url_effective}' \
+      "https://github.com/$REPO/releases/latest")" || fail "cannot reach github.com to find the latest release"
+    SW_VERSION="${latest_url##*/}"
+    case "$SW_VERSION" in v[0-9]*) ;; *) fail "cannot find the latest release of $REPO" ;; esac
   fi
   case "$SW_VERSION" in v*) ;; *) SW_VERSION="v$SW_VERSION" ;; esac
   case "$SW_VERSION" in *[!A-Za-z0-9._-]*) fail "invalid version: $SW_VERSION" ;; esac
   base="https://github.com/$REPO/releases/download/$SW_VERSION"
   archive="secwatch-$SW_VERSION.tar.gz"
   say "Downloading secwatch $SW_VERSION"
-  curl -fsSL -o "$WORK/$archive" "$base/$archive" || fail "download failed: $base/$archive"
-  curl -fsSL -o "$WORK/SHA256SUMS" "$base/SHA256SUMS" || fail "download failed: $base/SHA256SUMS"
+  curl -fsSL "${CURL_RETRY[@]}" -o "$WORK/$archive" "$base/$archive" || fail "download failed: $base/$archive"
+  curl -fsSL "${CURL_RETRY[@]}" -o "$WORK/SHA256SUMS" "$base/SHA256SUMS" || fail "download failed: $base/SHA256SUMS"
   (cd "$WORK" && grep " $archive\$" SHA256SUMS | sha256sum -c --quiet -) \
     || fail "checksum mismatch: the download is damaged or was tampered with"
   mkdir "$WORK/src" && tar -xzf "$WORK/$archive" -C "$WORK/src" --strip-components=1
