@@ -28,7 +28,7 @@ create table if not exists events (
 create index if not exists ix_events_ts on events(ts);
 create index if not exists ix_events_ip_ts on events(ip, ts);
 create index if not exists ix_events_kind_ts on events(kind, ts);
-create table if not exists cursors (path text primary key, inode integer, offset integer, updated text);
+create table if not exists cursors (path text primary key, inode integer, offset integer, updated text, head text);
 create table if not exists traffic (hour text, source text, total integer not null, primary key (hour, source));
 create table if not exists findings (
   source text, code text, severity text, title text, detail text, fix text, seen text,
@@ -52,6 +52,9 @@ def init_db(path: str) -> None:
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with connect(path) as conn:
         conn.executescript(SCHEMA)
+        # 0.2.2: fingerprint of the file start, to notice copytruncate even when the size matches.
+        if "head" not in {r["name"] for r in conn.execute("pragma table_info(cursors)")}:
+            conn.execute("alter table cursors add column head text")
 
 
 @contextmanager

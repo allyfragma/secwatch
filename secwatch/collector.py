@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import sqlite3
@@ -19,6 +20,22 @@ log = logging.getLogger("secwatch.collector")
 CHUNK = 8 * 1024 * 1024
 
 
+HEAD_BYTES = 128
+
+
+def _fingerprint(start: bytes) -> str:
+    return f"{len(start)}:{hashlib.sha1(start).hexdigest()}"
+
+
+def _same_start(stored: str | None, start: bytes) -> bool:
+    """False if the first bytes changed since the cursor was saved (truncated and rewritten)."""
+    if not stored:
+        return True  # cursor from before 0.2.2
+    length, _, digest = stored.partition(":")
+    n = int(length or 0)
+    return len(start) >= n and hashlib.sha1(start[:n]).hexdigest() == digest
+
+
 def _read_chunk(conn: sqlite3.Connection, path: str) -> tuple[list[tuple[int, str]], bool]:
     """Read the next complete lines of `path` after the stored cursor.
 
@@ -29,13 +46,14 @@ def _read_chunk(conn: sqlite3.Connection, path: str) -> tuple[list[tuple[int, st
         st = os.stat(path)
     except FileNotFoundError:
         return [], False
-    row = conn.execute("select inode, offset from cursors where path = ?", (path,)).fetchone()
-    offset = 0
-    if row and row["inode"] == st.st_ino and st.st_size >= row["offset"]:
-        offset = row["offset"]
-    if offset >= st.st_size:
-        return [], False
+    row = conn.execute("select inode, offset, head from cursors where path = ?", (path,)).fetchone()
     with open(path, "rb") as fh:
+        start = fh.read(HEAD_BYTES)
+        offset = 0
+        if row and row["inode"] == st.st_ino and st.st_size >= row["offset"] and _same_start(row["head"], start):
+            offset = row["offset"]
+        if offset >= st.st_size:
+            return [], False
         fh.seek(offset)
         data = fh.read(CHUNK)
     end = data.rfind(b"\n")
@@ -47,9 +65,10 @@ def _read_chunk(conn: sqlite3.Connection, path: str) -> tuple[list[tuple[int, st
         lines.append((pos, raw.decode("utf-8", "replace").rstrip("\r")))
         pos += len(raw) + 1
     conn.execute(
-        "insert into cursors (path, inode, offset, updated) values (?,?,?,?)"
-        " on conflict(path) do update set inode = excluded.inode, offset = excluded.offset, updated = excluded.updated",
-        (path, st.st_ino, pos, db.iso(db.utc_now())),
+        "insert into cursors (path, inode, offset, updated, head) values (?,?,?,?,?)"
+        " on conflict(path) do update set inode = excluded.inode, offset = excluded.offset,"
+        " updated = excluded.updated, head = excluded.head",
+        (path, st.st_ino, pos, db.iso(db.utc_now()), _fingerprint(start)),
     )
     return lines, pos < st.st_size
 
@@ -68,7 +87,9 @@ def _collect_file(conn: sqlite3.Connection, path: str, source: str, parse) -> in
             if ts is not None and source in ("nginx", "caddy"):
                 hours[ts.strftime("%Y-%m-%dT%H")] += 1
             if event is not None:
-                events.append((db.event_key(path, inode, offset), event))
+                # The line is part of the key: after copytruncate the same offsets
+                # are reused by new lines, which must not look like repeats.
+                events.append((db.event_key(path, inode, offset, line), event))
         inserted += db.insert_events(conn, events)
         if hours:
             db.add_traffic(conn, source, dict(hours))

@@ -47,6 +47,20 @@ def test_collect_is_incremental_and_handles_rotation(settings, host):
     assert count(settings) == total + 2
 
 
+
+def test_copytruncate_rotation_keeps_new_events(settings, host):
+    collect_logs(settings)
+    auth = host / "var/log/auth.log"
+    first = "2026-10-20T10:00:00+00:00 erp sshd[1]: Invalid user aa from 203.0.113.240 port 1\n"
+    auth.write_text(first)                     # logrotate copytruncate: same inode, shorter file
+    collect_logs(settings)
+    before = count(settings)
+    auth.write_text("2026-10-20T11:00:00+00:00 erp sshd[2]: Invalid user bb from 203.0.113.241 port 1\n")
+    collect_logs(settings)                      # same offset 0, different line -> a new event
+    assert count(settings) == before + 1
+    assert count(settings, "select count(*) from events where ip = '203.0.113.241'") == 1
+
+
 def test_secrets_never_stored(settings):
     collect_logs(settings)
     assert count(settings, "select count(*) from events where target like '%SECRET%' or detail like '%SECRET%'") == 0
@@ -248,3 +262,16 @@ def test_supabase_advisors_grouped_per_lint(settings):
     from secwatch.i18n import plural
     assert [plural(n, "plural.object") for n in (1, 2, 5, 11, 21, 22, 92, 112)] == [
         "объект", "объекта", "объектов", "объектов", "объект", "объекта", "объекта", "объектов"]
+
+
+def test_old_database_gets_the_cursor_fingerprint_column(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    with sqlite3.connect(path) as conn:
+        conn.execute("create table cursors (path text primary key, inode integer, offset integer, updated text)")
+        conn.execute("insert into cursors values ('/var/log/auth.log', 1, 10, 'x')")
+    db.init_db(path)
+    db.init_db(path)  # idempotent
+    with db.connect(path) as conn:
+        cols = {r["name"] for r in conn.execute("pragma table_info(cursors)")}
+        assert "head" in cols and conn.execute("select offset from cursors").fetchone()[0] == 10
