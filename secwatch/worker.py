@@ -7,7 +7,7 @@ import os
 import threading
 import time
 
-from . import db
+from . import allowlist, db
 from .alerts import ErpSender, check_alerts, default_sender
 from .audit import audit_host
 from .collector import collect_logs
@@ -32,6 +32,14 @@ def run_once(settings: Settings, sender, geo: Geo, poll_supabase_now: bool) -> N
         db.set_meta(conn, "last_collect", db.iso(db.utc_now()))
     if poll_supabase_now:
         poll_supabase(settings)
+    al = allowlist.load(settings)
+    with db.connect(settings.db_path) as conn:
+        allowlist.mark_events(conn, al)  # before alerts: own IPs must not alert
+        if al.errors:
+            db.replace_findings(conn, "allowlist", [catalog_finding(
+                "allowlist_invalid", "low", "allowlist_invalid", entries=", ".join(al.errors[:5]))])
+        else:
+            db.replace_findings(conn, "allowlist", [])
     check_alerts(settings, sender, geo)
 
 

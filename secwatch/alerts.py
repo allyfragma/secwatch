@@ -19,7 +19,7 @@ from . import db
 from .config import Settings
 from .geo import Geo
 from .i18n import t
-from .models import ATTACK_KINDS
+from .models import ATTACK_KINDS, URGENT_SYSTEM_KINDS, kind_label
 from .summary import build_summary
 
 log = logging.getLogger("secwatch.alerts")
@@ -140,17 +140,21 @@ def check_alerts(settings: Settings, sender, geo: Geo, now: datetime | None = No
             if ev["kind"] == "ssh_accepted":
                 fresh = conn.execute("insert or ignore into known_logins (ip, first_seen) values (?, ?)",
                                      (ev["ip"], ev["ts"])).rowcount == 1
-                if fresh:
+                if fresh and not ev["allowed"]:
                     g = geo.lookup(ev["ip"])
                     outgoing.append(("new_login", t(
                         "alert.new_login", user=e(ev["username"] or "?"), ip=e(ev["ip"]), country=e(g["country"]),
                         asn=e(g["asn"]), detail=e(ev["detail"] or ""))))
+            elif ev["kind"] in URGENT_SYSTEM_KINDS and _once(conn, f"system:{ev['id']}"):
+                outgoing.append(("findings", t(
+                    "alert.system", what=e(kind_label(ev["kind"])), target=e(ev["target"] or ""),
+                    detail=e(ev["detail"] or ""), severity=e(ev["severity"]))))
             elif ev["kind"] == "web_sensitive_served" and _once(conn, f"sensitive:{ev['id']}"):
                 outgoing.append(("sensitive_file", t(
                     "alert.sensitive_file", target=e(ev["target"] or ""), status=ev["status"], ip=e(ev["ip"] or ""))))
         window = db.iso(now - timedelta(minutes=10))
         kinds = "(" + ",".join(f"'{k}'" for k in ATTACK_KINDS) + ")"
-        for r in conn.execute(f"select ip, count(*) n from events where ts >= ? and kind in {kinds} and ip is not null "
+        for r in conn.execute(f"select ip, count(*) n from events where ts >= ? and kind in {kinds} and ip is not null and allowed = 0 "
                               f"group by ip having n >= ?", (window, settings.spike_threshold)):
             if _once(conn, f"spike:{r['ip']}:{now.astimezone(tz).date()}"):
                 g = geo.lookup(r["ip"])
@@ -180,6 +184,8 @@ def format_digest(s: dict) -> str:
              t("digest.web", attacks=s["web_attacks"], requests=s["web_requests"])]
     if s["ssh_logins"]:
         lines.append(t("digest.logins", count=len(s["ssh_logins"])))
+    if s["system_events"] or s["new_log_events"]:
+        lines.append(t("digest.system", events=len(s["system_events"]), new=len(s["new_log_events"])))
     if s["top_ips"]:
         top = s["top_ips"][0]
         lines.append(t("digest.top_ip", ip=e(top["ip"]), country=e(top["country"]), count=top["count"]))

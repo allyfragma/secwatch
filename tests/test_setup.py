@@ -126,3 +126,16 @@ def test_doctor_does_not_create_the_database(tmp_path, monkeypatch):
     s = Settings(host_root=str(tmp_path), db_path=str(tmp_path / "nope" / "secwatch.db"))
     assert doctor.check_storage(s).status == "warn"
     assert not (tmp_path / "nope").exists()
+
+
+def test_setup_offers_current_ssh_ip_for_the_allowlist(tmp_path, monkeypatch):
+    monkeypatch.setenv("SSH_CLIENT", "198.51.100.23 51234 22")
+    env = tmp_path / "secwatch.env"
+    # lang, timezone, add own IP? yes, label, telegram no, supabase no
+    run_setup(str(env), root=str(tmp_path), io=scripted(["en", "UTC", "y", "office", "n", "n"], [], []),
+              client=telegram_and_supabase([]))
+    assert "198.51.100.23 office" in (tmp_path / "allowlist.txt").read_text()
+    # second run does not ask again for the same IP
+    run_setup(str(env), root=str(tmp_path), io=scripted(["en", "UTC", "n", "n"], [], []),
+              client=telegram_and_supabase([]))
+    assert (tmp_path / "allowlist.txt").read_text().count("198.51.100.23") == 1

@@ -23,7 +23,8 @@ create table if not exists events (
   conn text,                      -- connection id (sshd pid) to count attempts once
   detail text,
   severity text not null default 'info',
-  key text not null unique
+  key text not null unique,
+  allowed integer not null default 0  -- 1 = source IP is on the allowlist
 );
 create index if not exists ix_events_ts on events(ts);
 create index if not exists ix_events_ip_ts on events(ip, ts);
@@ -37,6 +38,10 @@ create table if not exists findings (
 create table if not exists known_logins (ip text primary key, first_seen text);
 create table if not exists alerts_sent (key text primary key, sent text);
 create table if not exists meta (k text primary key, v text);
+create table if not exists log_templates (
+  key text primary key, program text, template text, first_seen text, last_seen text,
+  count integer not null default 0, baseline integer not null default 0
+);
 """
 
 
@@ -55,6 +60,9 @@ def init_db(path: str) -> None:
         # 0.2.2: fingerprint of the file start, to notice copytruncate even when the size matches.
         if "head" not in {r["name"] for r in conn.execute("pragma table_info(cursors)")}:
             conn.execute("alter table cursors add column head text")
+        # 0.3.0: allowlist flag on events.
+        if "allowed" not in {r["name"] for r in conn.execute("pragma table_info(events)")}:
+            conn.execute("alter table events add column allowed integer not null default 0")
 
 
 @contextmanager

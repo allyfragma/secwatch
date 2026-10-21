@@ -38,6 +38,12 @@ class Settings:
     geoip_asn_db: str = field(default_factory=lambda: _env("SECWATCH_GEOIP_ASN_DB", "/data/GeoLite2-ASN.mmdb"))
     # Download and refresh the free DB-IP Lite databases into the data directory.
     geoip_auto_update: bool = field(default_factory=lambda: _bool("SECWATCH_GEOIP_AUTO_UPDATE", True))
+    # Your own IPs/networks: "ip-or-cidr label; ..." (and/or an allowlist file, see allowlist.py).
+    allowlist: str = field(default_factory=lambda: _env("SECWATCH_ALLOWLIST"))
+    allowlist_file: str = field(default_factory=lambda: _env("SECWATCH_ALLOWLIST_FILE"))
+    # System log for rare/notable events; new event types are learned for this many days first.
+    syslog_logs: list = field(default_factory=list)
+    rare_learning_days: int = field(default_factory=lambda: _int("SECWATCH_RARE_LEARNING_DAYS", 3))
     poll_seconds: int = field(default_factory=lambda: _int("SECWATCH_POLL_SECONDS", 30))
     web_host: str = field(default_factory=lambda: _env("SECWATCH_WEB_HOST", "0.0.0.0"))
     web_port: int = field(default_factory=lambda: _int("SECWATCH_WEB_PORT", 8088))
@@ -68,6 +74,8 @@ class Settings:
             self.nginx_logs = _list("SECWATCH_NGINX_LOGS", f"{root}/var/log/nginx/access.log")
         if not self.caddy_logs:
             self.caddy_logs = _list("SECWATCH_CADDY_LOGS", f"{root}/var/log/caddy/access.json")
+        if not self.syslog_logs:
+            self.syslog_logs = _list("SECWATCH_SYSLOG_LOGS", f"{root}/var/log/syslog")
         if not self.fail2ban_logs:
             self.fail2ban_logs = _list("SECWATCH_FAIL2BAN_LOGS", f"{root}/var/log/fail2ban.log")
 

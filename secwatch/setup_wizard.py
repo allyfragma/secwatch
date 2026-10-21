@@ -48,6 +48,7 @@ def detect_logs(root: str = "/") -> dict[str, list[str]]:
         "SECWATCH_NGINX_LOGS": _first(root, ["/var/log/nginx/access.log"]),
         "SECWATCH_CADDY_LOGS": caddy,
         "SECWATCH_FAIL2BAN_LOGS": _first(root, ["/var/log/fail2ban.log"]),
+        "SECWATCH_SYSLOG_LOGS": _first(root, ["/var/log/syslog", "/var/log/messages"]),
     }
 
 
@@ -177,6 +178,8 @@ def run_setup(env_path: str | None = None, root: str = "/", io: Io | None = None
         updates["SECWATCH_SYSLOG_TZ"] = tz
         updates["SECWATCH_TIMEZONE"] = io.question("Timezone for daily totals", current.get("SECWATCH_TIMEZONE", tz))
 
+        _offer_own_ip(io, path)
+
         if not current.get("SECWATCH_WEB_PASSWORD"):
             updates["SECWATCH_WEB_USER"] = current.get("SECWATCH_WEB_USER", "admin")
             updates["SECWATCH_WEB_PASSWORD"] = secrets.token_urlsafe(24)
@@ -203,6 +206,38 @@ def run_setup(env_path: str | None = None, root: str = "/", io: Io | None = None
     finally:
         if own:
             client.close()
+
+
+def _offer_own_ip(io: Io, env_path: str) -> None:
+    """Over SSH, offer to put the admin's current IP on the allowlist (it then never counts as an attacker)."""
+    client = os.environ.get("SSH_CLIENT", "").split()
+    if not client:
+        return
+    ip = client[0]
+    allow_path = os.path.join(os.path.dirname(os.path.abspath(env_path)), "allowlist.txt")
+    try:
+        with open(allow_path, encoding="utf-8") as fh:
+            if any(line.split("#")[0].split()[:1] == [ip] for line in fh):
+                return
+    except OSError:
+        pass
+    io.say("")
+    if not io.yes(f"You are connected from {ip}. Add it to the allowlist (your own IP, not an attacker)?"):
+        return
+    label = io.question("Label for it", "admin")
+    new = not os.path.exists(allow_path)
+    with open(allow_path, "a", encoding="utf-8") as fh:
+        if new:
+            fh.write("# Own IPs and networks: one per line, optional label. See README.\n")
+        fh.write(f"{ip} {label}\n")
+    if new and allow_path.startswith("/etc/secwatch/") and hasattr(os, "geteuid") and os.geteuid() == 0:
+        import grp
+        try:
+            os.chown(allow_path, 0, grp.getgrnam("secwatch").gr_gid)
+            os.chmod(allow_path, 0o640)
+        except KeyError:
+            pass
+    io.say(f"  ✓ {ip} added to {allow_path}")
 
 
 def _setup_telegram(io: Io, client: httpx.Client, updates: dict, lang: str) -> None:

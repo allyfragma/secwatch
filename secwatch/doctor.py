@@ -71,7 +71,8 @@ def _readable(path: str) -> str | None:
 def check_logs(settings: Settings) -> list[Check]:
     out = []
     groups = {"SSH log": settings.auth_logs, "nginx log": settings.nginx_logs,
-              "Caddy log": settings.caddy_logs, "fail2ban log": settings.fail2ban_logs}
+              "Caddy log": settings.caddy_logs, "fail2ban log": settings.fail2ban_logs,
+              "system log": settings.syslog_logs}
     readable_any = False
     for name, paths in groups.items():
         for path in paths:

@@ -98,8 +98,20 @@ button{border:1px solid var(--line);background:var(--card);color:var(--muted);bo
   <section class="card"><h2>{{ t("ui.logins.title") }}</h2>
     <table><tr><th>{{ t("ui.logins.time") }}</th><th>{{ t("ui.logins.user") }}</th><th>IP</th><th>{{ t("ui.logins.country") }}</th><th>{{ t("ui.logins.method") }}</th><th>{{ t("ui.logins.flags") }}</th></tr>
     {% for l in s.ssh_logins %}<tr><td>{{ l.time }}</td><td>{{ l.user }}</td><td>{{ l.ip }}</td><td>{{ l.country }}</td><td>{{ l.method }}</td>
-      <td>{% if l.first_time %}<span class="badge medium">{{ t("ui.logins.new_ip") }}</span>{% endif %} {% if l.had_failures %}<span class="badge high">{{ t("ui.logins.had_failures") }}</span>{% endif %}</td></tr>
+      <td>{% if l.known is not none %}<span class="badge low">{{ t("ui.logins.known") }}{% if l.known %}: {{ l.known }}{% endif %}</span>{% elif l.first_time %}<span class="badge medium">{{ t("ui.logins.new_ip") }}</span>{% endif %} {% if l.had_failures %}<span class="badge high">{{ t("ui.logins.had_failures") }}</span>{% endif %}</td></tr>
     {% else %}<tr><td colspan="6" class="muted">{{ t("ui.logins.none") }}</td></tr>{% endfor %}</table>
+    {% if s.allowlist_size %}<div class="muted">{{ t("ui.logins.allowlist", n=s.allowlist_size) }}</div>{% endif %}
+  </section>
+
+  <section class="card"><h2>{{ t("ui.system.title") }}</h2>
+    <table><tr><th>{{ t("ui.logins.time") }}</th><th>{{ t("ui.system.event") }}</th><th>{{ t("ui.system.what") }}</th><th>{{ t("ui.system.detail") }}</th></tr>
+    {% for e in s.system_events %}<tr><td>{{ e.time }}</td><td><span class="badge {{ e.severity }}">{{ e.label }}</span></td><td>{{ e.target }}</td><td>{{ e.detail }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">{{ t("ui.system.none") }}</td></tr>{% endfor %}</table>
+    <h3>{{ t("ui.system.new_title") }}</h3>
+    <div class="muted">{{ t("ui.system.new_hint") }}</div>
+    <table><tr><th>{{ t("ui.system.first") }}</th><th>{{ t("ui.system.program") }}</th><th>{{ t("ui.system.template") }}</th><th class="num">{{ t("ui.kinds.count") }}</th></tr>
+    {% for n in s.new_log_events %}<tr><td>{{ n.time }}</td><td>{{ n.program }}</td><td><code>{{ n.template }}</code></td><td class="num">{{ n.count }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">{{ t("ui.system.new_none") }}</td></tr>{% endfor %}</table>
   </section>
 
   <section class="card"><h2>{{ t("ui.kinds.title") }}</h2>

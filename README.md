@@ -90,6 +90,36 @@ docker compose -f compose.dev.yaml up --build   # http://localhost:8089  admin /
 docker build --target test -t secwatch:test . && docker run --rm secwatch:test
 ```
 
+## Your own IPs (allowlist)
+
+Put your office, VPN, CI or monitoring addresses in `/etc/secwatch/allowlist.txt`
+(Docker: `allowlist.txt` in the data volume), one per line with an optional label:
+
+```
+203.0.113.5          office
+198.51.100.0/24      VPN
+```
+
+Their events are kept but are not counted as attacks, do not raise spikes or
+"login from a new IP" alerts, and logins from them are marked as known. Changes
+apply to the whole history. `secwatch setup` run over SSH offers to add your
+current IP. Also possible inline: `SECWATCH_ALLOWLIST="203.0.113.5 office; 198.51.100.0/24 VPN"`.
+
+## System events
+
+secwatch also reads the system log (`/var/log/syslog`) and the non-SSH part of `auth.log`:
+
+- **Notable events**, recognised from day one: reboots, out-of-memory kills, disk
+  errors, failed services, and **user/group/password changes** — a new user or
+  someone added to `sudo`/`docker` is alerted at once (attackers do this to keep access).
+- **New kinds of events**: each line is reduced to a template (IPs, numbers, ids,
+  times masked) and counted. During the first 3 days (`SECWATCH_RARE_LEARNING_DAYS`)
+  secwatch learns what is normal; after that, messages this server never produced
+  before are listed — a new service, an unusual error, a changed setting. Firewall
+  packet logs are grouped, SSH and secwatch's own lines are left out.
+
+Only masked templates and counts are stored, never raw log lines.
+
 ## Check from the outside (free GitHub Action)
 
 The monitor sees the server from the inside. `secwatch probe` looks at it the way

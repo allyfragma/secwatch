@@ -20,6 +20,9 @@ ATTACK_KINDS = (
     "supabase_auth_fail",
     "supabase_rate_limit",
 )
+# System events from syslog/auth.log (not attacks); the urgent ones alert at once.
+SYSTEM_KINDS = ("sys_boot", "sys_oom", "sys_disk_error", "sys_service_failed", "sys_user_change")
+URGENT_SYSTEM_KINDS = ("sys_user_change", "sys_disk_error")
 SSH_FAIL_KINDS = ("ssh_failed_password", "ssh_invalid_user", "ssh_preauth_fail", "ssh_probe")
 WEB_ATTACK_KINDS = ("web_scan", "web_exploit", "web_scanner", "web_probe")
 

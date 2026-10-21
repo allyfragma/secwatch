@@ -13,7 +13,8 @@ from zoneinfo import ZoneInfo
 from . import db
 from .config import Settings
 from .models import Event
-from .parsers import parse_caddy, parse_fail2ban, parse_nginx, parse_ssh
+from .parsers import parse_caddy, parse_fail2ban, parse_nginx, parse_ssh, parse_syslog_ts
+from .syslograre import TemplateTracker, notable_event, split_program
 
 log = logging.getLogger("secwatch.collector")
 
@@ -100,10 +101,23 @@ def _collect_file(conn: sqlite3.Connection, path: str, source: str, parse) -> in
 
 def collect_logs(settings: Settings, now: datetime | None = None) -> dict[str, int]:
     syslog_tz = ZoneInfo(settings.syslog_tz)
+    tracker = TemplateTracker()
+
+    def system_line(line: str):
+        """Any syslog-format line: learn its template, return a notable event if it is one."""
+        parsed = parse_syslog_ts(line, syslog_tz, now)
+        if parsed is None:
+            return None, None
+        ts, rest = parsed
+        prog, msg = split_program(rest)
+        tracker.observe(ts, prog, msg)
+        return ts, notable_event(ts, prog, msg)
 
     def ssh(line: str):
         e = parse_ssh(line, syslog_tz, now)
-        return (e.ts if e else None), e
+        if e is None:  # user/group/password changes also live in auth.log
+            return system_line(line)
+        return e.ts, e
 
     def f2b(line: str):
         e = parse_fail2ban(line, syslog_tz)
@@ -116,6 +130,7 @@ def collect_logs(settings: Settings, now: datetime | None = None) -> dict[str, i
             ("nginx", settings.nginx_logs, parse_nginx),
             ("caddy", settings.caddy_logs, parse_caddy),
             ("fail2ban", settings.fail2ban_logs, f2b),
+            ("syslog", settings.syslog_logs, system_line),
         ):
             for path in paths:
                 try:
@@ -127,4 +142,7 @@ def collect_logs(settings: Settings, now: datetime | None = None) -> dict[str, i
                 stats[path] = n
                 if n:
                     log.info("%s: %d new events from %s", source, n, path)
+        new = tracker.flush(conn, settings.rare_learning_days, now)
+        if new:
+            log.info("system: %d new kinds of log events", new)
     return stats
