@@ -144,6 +144,22 @@ def check_supabase(settings: Settings, client: httpx.Client) -> Check | None:
         return Check("fail", "Supabase", str(exc))
 
 
+def check_claude(settings: Settings) -> Check:
+    if not settings.anthropic_api_key:
+        return Check("ok", "Claude", "no API key: the button copies a prompt to paste into any assistant")
+    try:
+        import anthropic
+        anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=15.0, max_retries=0).models.retrieve(
+            settings.claude_model)
+        return Check("ok", "Claude", f"{settings.claude_model} (API key accepted)")
+    except anthropic.AuthenticationError:
+        return Check("fail", "Claude", "the API key was rejected (SECWATCH_ANTHROPIC_API_KEY)")
+    except anthropic.NotFoundError:
+        return Check("fail", "Claude", f"model {settings.claude_model} not found (SECWATCH_CLAUDE_MODEL)")
+    except anthropic.APIError as exc:
+        return Check("warn", "Claude", f"could not check the key: {type(exc).__name__}")
+
+
 def check_erp(settings: Settings) -> Check | None:
     if not settings.erp_ingest_key:
         return None
@@ -159,6 +175,7 @@ def run_checks(settings: Settings, client: httpx.Client | None = None) -> list[C
         checks = [check_storage(settings), check_dashboard(settings), *check_logs(settings), check_geo(settings)]
         checks += [c for c in (check_telegram(settings, client), check_supabase(settings, client),
                                check_erp(settings)) if c]
+        checks.append(check_claude(settings))
         if not any(c.name in ("Telegram", "ERP delivery") for c in checks):
             checks.append(Check("warn", "alerts", "no Telegram or ERP delivery: alerts are only on the dashboard"))
         return checks

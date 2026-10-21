@@ -120,6 +120,21 @@ secwatch also reads the system log (`/var/log/syslog`) and the non-SSH part of `
 
 Only masked templates and counts are stored, never raw log lines.
 
+## Analyze with Claude
+
+The dashboard button turns the day's data into a plain-language review: is anything
+actually dangerous, what is connected, what to fix first, with commands.
+
+- **Free, no key:** the button copies a ready prompt (instructions + today's data) —
+  paste it into Claude Code, claude.ai or any assistant.
+- **With an API key** (`SECWATCH_ANTHROPIC_API_KEY`, model `SECWATCH_CLAUDE_MODEL`,
+  default `claude-opus-5-5`): the review appears right on the dashboard. One answer
+  per day is cached, so re-opening the page costs nothing.
+
+Only an aggregated summary is shared: counters, attacker IPs, findings, system events
+and masked log templates. Your own (allowlisted) IPs, login IPs, host names, tokens and
+Supabase identifiers are never included.
+
 ## Check from the outside (free GitHub Action)
 
 The monitor sees the server from the inside. `secwatch probe` looks at it the way
@@ -172,7 +187,6 @@ dashboard, `worker.py` runs the loop. Data lives in SQLite.
 ## Roadmap
 
 - Supabase-only mode as a GitHub Action (for apps without their own server).
-- "Fix with AI": export findings (no secrets) as a ready prompt for Claude Code / Cursor.
 - journald and CrowdSec as sources.
 
 ## License

@@ -6,16 +6,18 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
+from . import claude
 from .config import Settings
 from .geo import Geo
 from .i18n import get_language, t
 from .summary import build_summary
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+STATIC = Path(__file__).parent / "static"
 TEMPLATES.env.globals.update(t=t, lang=get_language)
 
 
@@ -60,9 +62,25 @@ def create_app(settings: Settings) -> FastAPI:
     def api_summary(day: str | None = Query(None)):
         return JSONResponse(build_summary(settings, parse_day(day), geo))
 
+    @app.get("/static/app.js")
+    def app_js():
+        return FileResponse(STATIC / "app.js", media_type="text/javascript")
+
     @app.post("/api/analyze", dependencies=[Depends(auth)])
-    def api_analyze():
-        raise HTTPException(status_code=501, detail=t("web.analyze_later"))
+    def api_analyze(request: Request, day: str | None = Query(None), force: bool = Query(False)):
+        # A custom header cannot be sent cross-site without CORS (not enabled here), so another
+        # site cannot make the browser, holding the dashboard password, spend API credit.
+        if request.headers.get("x-secwatch") != "1":
+            raise HTTPException(status_code=403, detail="missing X-Secwatch header")
+        s = build_summary(settings, parse_day(day), geo)
+        if not settings.anthropic_api_key:
+            return {"mode": "prompt", "prompt": claude.copy_prompt(s)}
+        try:
+            return {"mode": "api", **claude.analyze(settings, s, force=force)}
+        except claude.AnalyzeError as exc:
+            reason = str(exc).split(":")[0]
+            return JSONResponse({"mode": "error", "error": t(f"claude.error.{reason}"),
+                                 "prompt": claude.copy_prompt(s)}, status_code=502)
 
     @app.get("/", response_class=HTMLResponse, dependencies=[Depends(auth)])
     def index(request: Request, day: str | None = Query(None)):
@@ -71,7 +89,7 @@ def create_app(settings: Settings) -> FastAPI:
         max_hour = max(s["hours"]) or 1
         max_trend = max(t["count"] for t in s["trend"]) or 1
         return TEMPLATES.TemplateResponse(request, "index.html", {
-            "s": s, "max_hour": max_hour, "max_trend": max_trend,
+            "s": s, "max_hour": max_hour, "max_trend": max_trend, "claude_api": bool(settings.anthropic_api_key),
             "prev_day": date.fromordinal(d.toordinal() - 1).isoformat(),
             "next_day": date.fromordinal(d.toordinal() + 1).isoformat(),
         })

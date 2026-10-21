@@ -28,6 +28,8 @@ pre{white-space:pre-wrap;background:var(--bg);padding:8px;border-radius:6px;font
 .tag{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 6px;margin:1px;font-size:12px}
 button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:8px;padding:8px 12px}
 .ok{color:var(--low);font-weight:600}
+  .claude-out{white-space:pre-wrap;margin-top:10px;padding:12px;border-radius:8px;background:rgba(127,127,127,.08)}
+  .claude-prompt{width:100%;min-height:180px;margin-top:10px;font:12px monospace}
 </style>
 </head>
 <body>
@@ -63,7 +65,16 @@ button{border:1px solid var(--line);background:var(--card);color:var(--muted);bo
     </details>
     {% endfor %}
     {% for n in s.notes %}<div class="muted" style="margin-top:6px">ℹ️ {{ n.title }}: {{ n.detail }}</div>{% endfor %}
-    <div style="margin-top:12px"><button disabled title="{{ t('ui.claude.hint') }}">{{ t("ui.claude.button") }}</button></div>
+    <div class="claude" id="claude" data-day="{{ s.day }}" data-mode="{{ 'api' if claude_api else 'prompt' }}"
+         data-copied="{{ t('ui.claude.copied') }}" data-working="{{ t('ui.claude.working') }}" data-failed="{{ t('ui.claude.failed') }}"
+         data-cached="{{ t('ui.claude.cached') }}">
+      <button id="claude-run">{{ t("ui.claude.button_api") if claude_api else t("ui.claude.button_prompt") }}</button>
+      {% if claude_api %}<button id="claude-again" hidden>{{ t("ui.claude.again") }}</button>{% endif %}
+      <div class="muted">{{ t("ui.claude.hint_api") if claude_api else t("ui.claude.hint_prompt") }}</div>
+      <div id="claude-status" class="muted"></div>
+      <div id="claude-out" class="claude-out" hidden></div>
+      <textarea id="claude-prompt" class="claude-prompt" readonly hidden></textarea>
+    </div>
   </section>
 
   <section class="grid2">
@@ -121,5 +132,6 @@ button{border:1px solid var(--line);background:var(--card);color:var(--muted);bo
     <div class="muted" style="margin-top:8px">{{ t("ui.integrations", supabase=t("ui.connected") if s.supabase_enabled else t("ui.not_connected"), telegram=t("ui.enabled") if s.telegram_enabled else t("ui.disabled")) }}</div>
   </section>
 </main>
+<script src="/static/app.js"></script>
 </body>
 </html>

@@ -44,6 +44,9 @@ class Settings:
     # System log for rare/notable events; new event types are learned for this many days first.
     syslog_logs: list = field(default_factory=list)
     rare_learning_days: int = field(default_factory=lambda: _int("SECWATCH_RARE_LEARNING_DAYS", 3))
+    # "Analyze with Claude": without a key the dashboard offers a prompt to copy instead.
+    anthropic_api_key: str = field(default_factory=lambda: _env("SECWATCH_ANTHROPIC_API_KEY"))
+    claude_model: str = field(default_factory=lambda: _env("SECWATCH_CLAUDE_MODEL", "claude-opus-5-5"))
     poll_seconds: int = field(default_factory=lambda: _int("SECWATCH_POLL_SECONDS", 30))
     web_host: str = field(default_factory=lambda: _env("SECWATCH_WEB_HOST", "0.0.0.0"))
     web_port: int = field(default_factory=lambda: _int("SECWATCH_WEB_PORT", 8088))
