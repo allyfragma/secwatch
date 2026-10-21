@@ -12,6 +12,18 @@ Made for people who ship apps fast and do not want to become security engineers.
 
 [Русская версия](README.ru.md)
 
+![Dashboard: risk, today's counters and what to fix](docs/img/1-overview.png)
+
+<p align="center">
+  <img src="docs/img/7-telegram.png" width="380" alt="Telegram alerts and the daily digest">
+  <img src="docs/img/4-logins-system.png" width="560" alt="Logins with own IPs marked, and system events">
+</p>
+
+![External check: what an attacker sees from the internet](docs/img/6-external-check.png)
+
+<sub>Screenshots use generated demo data (documentation IP ranges): one server that was
+brute-forced, served its `.env` and got a new sudo user — the story secwatch connects.</sub>
+
 ## What it sees
 
 | Source | What you get |

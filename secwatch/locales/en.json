@@ -216,7 +216,7 @@
   "rec.sys_disk_error.title": "Disk errors: {n} today",
   "rec.sys_disk_error.detail": "The kernel reported read/write errors or remounted a file system read-only.",
   "rec.sys_disk_error.fix": "Check `dmesg -T | grep -i error`, free space and the disk health; make sure backups are fresh.",
-  "rec.sys_oom.title": "Out of memory: {n} processes killed ({targets})",
+  "rec.sys_oom.title": "Out of memory: killed processes: {n} ({targets})",
   "rec.sys_oom.detail": "When memory runs out the kernel kills processes; services restart or stop working.",
   "rec.sys_oom.fix": "Check memory use (`free -m`, `ps aux --sort=-rss | head`), add swap or memory, or limit the hungry service.",
   "rec.sys_service_failed.title": "Service failed: {unit} ({n}×)",
@@ -234,7 +234,7 @@
   "alert.system": "⚙️ <b>{what}</b>: {target}\n{detail}\nSeverity: {severity}",
   "digest.system": "System: notable events {events}, new kinds of log events {new}",
   "ui.logins.known": "known",
-  "ui.logins.allowlist": "Allowlist: {n} entries — their events are not counted as attacks.",
+  "ui.logins.allowlist": "Allowlist entries: {n} — their events are not counted as attacks.",
   "ui.system.title": "System: notable and new events",
   "ui.system.event": "Event",
   "ui.system.what": "What",
@@ -261,5 +261,12 @@
   "claude.error.api": "Claude API returned an error — try again later.",
   "claude.error.network": "Claude API is not reachable from the server.",
   "claude.error.refusal": "Claude declined to answer this request.",
-  "claude.error.empty": "Claude returned an empty answer — try again."
+  "claude.error.empty": "Claude returned an empty answer — try again.",
+  "sysdetail.new_user": "new user",
+  "sysdetail.user_deleted": "user deleted",
+  "sysdetail.added_to_group": "added to group {group}",
+  "sysdetail.password_changed": "password changed",
+  "sysdetail.new_group": "new group",
+  "sysdetail.oom_killed": "process killed by the kernel",
+  "sysdetail.boot": "kernel started"
 }

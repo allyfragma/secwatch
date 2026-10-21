@@ -20,6 +20,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 from . import db
+from .i18n import t
 from .models import Event
 
 PROG_RE = re.compile(r"^(?P<prog>[A-Za-z0-9_.@/-]+?)(?:\[\d+\])?:\s+(?P<msg>.*)$")
@@ -88,6 +89,11 @@ NOTABLE = [
 ]
 
 
+# Which named group of the user-change pattern matched -> plain-language detail key.
+USER_CHANGE_WHAT = {"target": "new_user", "target2": "user_deleted", "target3": "added_to_group",
+                    "target4": "password_changed", "target5": "new_group"}
+
+
 def notable_event(ts: datetime, prog: str, msg: str) -> Event | None:
     for kind, severity, prog_rx, msg_rx in NOTABLE:
         if prog_rx and not prog_rx.match(prog):
@@ -99,7 +105,15 @@ def notable_event(ts: datetime, prog: str, msg: str) -> Event | None:
         target = next((v for k, v in groups.items() if k.startswith("target")), prog)
         if kind == "sys_user_change" and groups.get("group", "").lower() in PRIVILEGED_GROUPS:
             severity = "critical"
-        detail = groups.get("detail") or (f"group={groups['group']}" if "group" in groups else template(msg)[:160])
+        if kind == "sys_user_change":
+            what = next(k for k in groups if k.startswith("target"))
+            detail = t(f"sysdetail.{USER_CHANGE_WHAT[what]}", group=groups.get("group", ""))
+        elif kind == "sys_oom":
+            detail = t("sysdetail.oom_killed")
+        elif kind == "sys_boot":
+            detail = t("sysdetail.boot")
+        else:
+            detail = groups.get("detail") or template(msg)[:160]
         return Event(ts=ts, source="system", kind=kind, target=target[:120], detail=detail, severity=severity)
     return None
 

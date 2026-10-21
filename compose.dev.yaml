@@ -13,6 +13,8 @@ services:
       SECWATCH_WEB_PASSWORD: dev-password
       SECWATCH_POLL_SECONDS: "15"
       SECWATCH_TIMEZONE: UTC
+      SECWATCH_ALLOWLIST: "198.51.100.7 office"
+      SECWATCH_GEOIP_AUTO_UPDATE: "0"
     entrypoint: ["sh", "-c", "python tools/gen_samples.py /tmp/host && exec python -m secwatch run"]
     ports:
       - "127.0.0.1:8089:8088"

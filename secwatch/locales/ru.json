@@ -234,7 +234,7 @@
   "alert.system": "⚙️ <b>{what}</b>: {target}\n{detail}\nВажность: {severity}",
   "digest.system": "Система: важных событий {events}, новых типов событий в журнале {new}",
   "ui.logins.known": "свой",
-  "ui.logins.allowlist": "Белый список: {n} записей — их события не считаются атаками.",
+  "ui.logins.allowlist": "Записей в белом списке: {n} — их события не считаются атаками.",
   "ui.system.title": "Система: важные и новые события",
   "ui.system.event": "Событие",
   "ui.system.what": "Что",
@@ -261,5 +261,12 @@
   "claude.error.api": "Claude API вернул ошибку — попробуйте позже.",
   "claude.error.network": "Claude API недоступен с сервера.",
   "claude.error.refusal": "Claude отказался отвечать на этот запрос.",
-  "claude.error.empty": "Claude вернул пустой ответ — попробуйте ещё раз."
+  "claude.error.empty": "Claude вернул пустой ответ — попробуйте ещё раз.",
+  "sysdetail.new_user": "новый пользователь",
+  "sysdetail.user_deleted": "пользователь удалён",
+  "sysdetail.added_to_group": "добавлен в группу {group}",
+  "sysdetail.password_changed": "сменён пароль",
+  "sysdetail.new_group": "новая группа",
+  "sysdetail.oom_killed": "процесс убит ядром",
+  "sysdetail.boot": "ядро запущено"
 }

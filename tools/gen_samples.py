@@ -113,7 +113,29 @@ def main() -> None:
     leak = scenario + timedelta(minutes=3)
     web.append((leak, nginx(leak, "192.0.2.77", "GET /.env HTTP/1.1", 200, 812, "Mozilla/5.0 (compatible; scanner)")))
 
-    for name, rows in (("var/log/auth.log", auth), ("var/log/nginx/access.log", web), ("var/log/fail2ban.log", f2b)):
+    # System log: routine noise plus a few notable events. After the brute-forced login the
+    # attacker creates a user and adds it to sudo - the story the dashboard should connect.
+    system, host = [], "erp"
+    t = start
+    while t < now:
+        t += timedelta(minutes=rnd.randint(3, 20))
+        system.append((t, syslog(t, host, rnd.choice([
+            "CRON[2211]: (root) CMD (cd / && run-parts --report /etc/cron.hourly)",
+            "systemd[1]: Started session-412.scope - Session 412 of User root.",
+            "systemd-timesyncd[611]: Contacted time server 192.0.2.123:123 (ntp.ubuntu.com).",
+            "kernel: [UFW BLOCK] IN=eth0 OUT= MAC=96:00:03:aa:bb:cc SRC=203.0.113.9 DST=10.0.0.2 LEN=40 PROTO=TCP SPT=48211 DPT=3389",
+        ]))))
+    oom = now - timedelta(hours=3, minutes=12)
+    system.append((oom, syslog(oom, host, "kernel: Out of memory: Killed process 31337 (node) total-vm:2048000kB")))
+    failed = now - timedelta(hours=1, minutes=40)
+    system.append((failed, syslog(failed, host, "systemd[1]: nginx.service: Failed with result 'exit-code'.")))
+    for minutes, msg in ((4, "useradd[5120]: new user: name=support, UID=1002, GID=1002, home=/home/support, shell=/bin/bash"),
+                         (5, "usermod[5131]: add 'support' to group 'sudo'")):
+        ts = scenario + timedelta(minutes=minutes)
+        auth.append((ts, syslog(ts, host, msg)))
+
+    for name, rows in (("var/log/auth.log", auth), ("var/log/nginx/access.log", web), ("var/log/fail2ban.log", f2b),
+                       ("var/log/syslog", system)):
         with open(f"{root}/{name}", "w", encoding="utf-8", newline="\n") as fh:
             fh.writelines(line for _, line in sorted(rows, key=lambda x: x[0]))
 
